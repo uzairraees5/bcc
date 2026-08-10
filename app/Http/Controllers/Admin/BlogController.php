@@ -26,7 +26,7 @@ class BlogController extends Controller
     public function store(Request $request)
     {
         $data = $this->validated($request);
-        $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
+        $data['slug'] = filled($data['slug'] ?? null) ? $data['slug'] : Str::slug($data['title']);
         $data['author_id'] = auth()->id();
 
         if ($request->hasFile('image')) {
@@ -52,7 +52,11 @@ class BlogController extends Controller
     public function update(Request $request, BlogPost $blogPost)
     {
         $data = $this->validated($request, $blogPost);
-        $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
+
+        // Never assume an optional request key exists. This also prevents
+        // "Undefined array key 'slug'" when a browser/form omits the field.
+        $slug = trim((string) ($data['slug'] ?? ''));
+        $data['slug'] = $slug !== '' ? $slug : Str::slug($data['title'] ?? $blogPost->title);
 
         if ($request->hasFile('image')) {
             if ($blogPost->image_path && Storage::disk('public')->exists($blogPost->image_path)) {
@@ -66,7 +70,8 @@ class BlogController extends Controller
         }
 
         unset($data['category']);
-        $blogPost->fill($data)->save();
+        $blogPost->fill($data);
+        $blogPost->save();
 
         return redirect()->route('admin.blog.posts')->with('success', 'Blog post updated.');
     }
@@ -130,18 +135,18 @@ class BlogController extends Controller
 
         return $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'slug' => ['nullable', 'string', 'max:255', $uniqueSlug],
+            'slug' => ['sometimes', 'nullable', 'string', 'max:255', $uniqueSlug],
             'content' => ['nullable', 'string'],
             'excerpt' => ['nullable', 'string'],
             'status' => ['required', 'in:draft,published'],
-            'category_id' => ['nullable', 'exists:blog_categories,id'],
-            'category' => ['nullable', 'string', 'max:255'],
-            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
-            'image_alt_text' => ['nullable', 'string', 'max:255'],
-            'image_title' => ['nullable', 'string', 'max:255'],
-            'image_caption' => ['nullable', 'string'],
-            'image_description' => ['nullable', 'string'],
-            'published_at' => ['nullable', 'date'],
+            'category_id' => ['sometimes', 'nullable', 'exists:blog_categories,id'],
+            'category' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'image' => ['sometimes', 'nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'image_alt_text' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'image_title' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'image_caption' => ['sometimes', 'nullable', 'string'],
+            'image_description' => ['sometimes', 'nullable', 'string'],
+            'published_at' => ['sometimes', 'nullable', 'date'],
         ]);
     }
 }
