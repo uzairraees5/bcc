@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth' => \App\Http\Middleware\Authenticate::class,
             'admin' => \App\Http\Middleware\EnsureAdmin::class,
+            'seo.admin' => \App\Http\Middleware\EnsureSeoAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
