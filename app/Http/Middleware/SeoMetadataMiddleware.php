@@ -87,8 +87,12 @@ class SeoMetadataMiddleware
             $meta = SeoMeta::where('page_type', 'page')->where('slug', $path)->first();
 
             if ($meta) {
-                $title = $meta->title ?: (($meta->page_title ?: $settings->default_title) . ' | ' . $settings->site_name);
-                $description = $meta->meta_description ?: $settings->default_description;
+                // A custom SEO title is authoritative and must be output exactly as saved.
+                // Only use the page title + site name when no custom SEO title exists.
+                $title = filled($meta->title)
+                    ? $meta->title
+                    : (($meta->page_title ?: $settings->default_title) . ' | ' . $settings->site_name);
+                $description = $meta->meta_description ?: ($meta->page_description ?? $settings->default_description);
                 $canonical = $meta->canonical_url ?: $canonical;
                 $index = $meta->robots_index ?? true;
                 $follow = $meta->robots_follow ?? true;
@@ -109,7 +113,6 @@ class SeoMetadataMiddleware
             }
         }
 
-        // Add a standard WebPage node for normal pages while keeping custom schemas intact.
         if (!$request->routeIs('blog.show') && !$request->routeIs('blog.category')) {
             $schemaNodes[] = [
                 '@type' => 'WebPage',
