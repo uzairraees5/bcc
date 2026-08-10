@@ -48,6 +48,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
     Route::post('/blog/categories', [BlogCategoryController::class, 'store'])->name('admin.blog.categories.store');
     Route::post('/blog/categories/quick', [BlogCategoryController::class, 'quickStore'])->name('admin.blog.categories.quick');
     Route::get('/blog/categories/{blogCategory}/edit', [BlogCategoryController::class, 'edit'])->name('admin.blog.categories.edit');
+    Route::post('/blog/categories/{blogCategory}/update', [BlogCategoryController::class, 'update'])->name('admin.blog.categories.update.post');
     Route::put('/blog/categories/{blogCategory}', [BlogCategoryController::class, 'update'])->name('admin.blog.categories.update');
     Route::delete('/blog/categories/{blogCategory}', [BlogCategoryController::class, 'destroy'])->name('admin.blog.categories.destroy');
 
