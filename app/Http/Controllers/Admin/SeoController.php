@@ -10,12 +10,15 @@ use App\Models\RedirectRule;
 use App\Models\SeoMeta;
 use App\Models\SeoSetting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rule;
+use ReflectionFunction;
 
 class SeoController extends Controller
 {
     public function dashboard()
     {
+        $this->discoverRoutePages();
         $settings = $this->settings();
         $seoPages = SeoMeta::where('page_type', 'page')->orderBy('slug')->get();
         $pages = $seoPages->count();
@@ -58,12 +61,8 @@ class SeoController extends Controller
 
     public function pages()
     {
+        $this->discoverRoutePages();
         $pages = SeoMeta::where('page_type', 'page')->orderBy('slug')->get();
-        foreach ([['/', 'Home'], ['/about-us', 'About Us'], ['/commercial-cleaning', 'Commercial Cleaning'], ['/services', 'Services'], ['/contact', 'Contact'], ['/locations', 'Locations'], ['/case-studies', 'Case Studies'], ['/book-walkthrough', 'Book Walkthrough']] as [$slug, $title]) {
-            if (!$pages->firstWhere('slug', $slug)) {
-                $pages->push(SeoMeta::create(['slug' => $slug, 'page_title' => $title, 'page_type' => 'page', 'is_active' => true, 'robots_index' => true, 'robots_follow' => true]));
-            }
-        }
         return view('admin.seo.pages', compact('pages'));
     }
 
@@ -109,7 +108,7 @@ class SeoController extends Controller
     public function storeRedirect(Request $request) { RedirectRule::create($request->validate(['source_url' => 'required|string|max:255', 'destination_url' => 'required|string|max:255', 'redirect_type' => 'required|string|max:10', 'notes' => 'nullable|string', 'is_active' => 'nullable|boolean'])); return back()->with('success', 'Redirect saved.'); }
     public function destroyRedirect(RedirectRule $redirect) { $redirect->delete(); return back()->with('success', 'Redirect deleted.'); }
     public function fourOhFour() { $logs = PageViewLog::latest('last_seen')->paginate(20); return view('admin.seo.four-oh-four', compact('logs')); }
-    public function reports() { $pages = SeoMeta::where('page_type', 'page')->get(); $posts = BlogPost::with('seo')->get(); return view('admin.seo.reports', compact('pages', 'posts')); }
+    public function reports() { $this->discoverRoutePages(); $pages = SeoMeta::where('page_type', 'page')->get(); $posts = BlogPost::with('seo')->get(); return view('admin.seo.reports', compact('pages', 'posts')); }
     public function integrations() { $settings = $this->settings(); return view('admin.seo.integrations', compact('settings')); }
     public function schema() { return view('admin.seo.schema', ['settings' => $this->settings()]); }
 
@@ -134,6 +133,7 @@ class SeoController extends Controller
 
     public function sitemap()
     {
+        $this->discoverRoutePages();
         $urls = [];
         foreach (SeoMeta::where('page_type', 'page')->where('is_active', true)->get() as $meta) $urls[] = ['loc' => url(ltrim($meta->slug, '/')), 'changefreq' => 'weekly', 'priority' => '0.8'];
         foreach (BlogPost::published()->get() as $post) $urls[] = ['loc' => route('blog.show', $post), 'changefreq' => 'weekly', 'priority' => '0.7'];
@@ -146,6 +146,92 @@ class SeoController extends Controller
         $settings = $this->settings();
         $content = $settings->robots_txt ?: "User-agent: *\nDisallow: /admin\nSitemap: " . url('/sitemap.xml') . "\n";
         return response($content, 200)->header('Content-Type', 'text/plain');
+    }
+
+    /**
+     * Discover public, route-backed Blade pages and create their SEO records once.
+     * This keeps the SEO panel in sync when a new public page route is added.
+     */
+    private function discoverRoutePages(): void
+    {
+        $excludedPrefixes = ['admin', 'blog'];
+        $excludedUris = ['sitemap.xml', 'robots.txt'];
+
+        foreach (Route::getRoutes() as $route) {
+            if (!in_array('GET', $route->methods(), true)) {
+                continue;
+            }
+
+            $uri = trim($route->uri(), '/');
+            if ($uri === '' && $route->uri() !== '/') {
+                continue;
+            }
+            if (in_array($uri, $excludedUris, true) || str_contains($uri, '{')) {
+                continue;
+            }
+            if (collect($excludedPrefixes)->contains(fn ($prefix) => $uri === $prefix || str_starts_with($uri, $prefix . '/'))) {
+                continue;
+            }
+
+            $action = $route->getAction('uses');
+            if (!$action instanceof \Closure) {
+                continue;
+            }
+
+            try {
+                $reflection = new ReflectionFunction($action);
+                $source = file_get_contents($reflection->getFileName());
+            } catch (\Throwable) {
+                continue;
+            }
+
+            if (!$source) {
+                continue;
+            }
+
+            $pattern = '/view\(\s*[\'\"]([^\'\"]+)[\'\"]/';
+            if (!preg_match($pattern, $source, $matches)) {
+                continue;
+            }
+
+            $viewName = $matches[1];
+            $viewPath = resource_path('views/' . str_replace('.', '/', $viewName) . '.blade.php');
+            if (!is_file($viewPath)) {
+                continue;
+            }
+
+            $slug = $route->uri() === '/' ? '/' : '/' . $uri;
+            $pageTitle = $this->bladeSection($viewPath, 'title') ?: $this->humanizePageName($viewName);
+            $metaDescription = $this->bladeSection($viewPath, 'meta_description');
+
+            SeoMeta::firstOrCreate(
+                ['page_type' => 'page', 'slug' => $slug],
+                [
+                    'page_title' => $pageTitle,
+                    'meta_description' => $metaDescription,
+                    'is_active' => true,
+                    'robots_index' => true,
+                    'robots_follow' => true,
+                ]
+            );
+        }
+    }
+
+    private function bladeSection(string $path, string $section): ?string
+    {
+        $content = @file_get_contents($path);
+        if (!$content) {
+            return null;
+        }
+
+        $pattern = '/@section\(\s*[\'\"]' . preg_quote($section, '/') . '[\'\"]\s*,\s*[\'\"](.*?)[\'\"]\s*\)/s';
+        return preg_match($pattern, $content, $matches) ? trim($matches[1]) : null;
+    }
+
+    private function humanizePageName(string $viewName): string
+    {
+        $name = last(explode('.', $viewName));
+        return ucwords(str_replace(['-', '_'], ' ', $name));
     }
 
     private function settings(): SeoSetting
