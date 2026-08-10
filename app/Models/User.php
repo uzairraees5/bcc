@@ -11,18 +11,9 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'is_admin',
-        'role',
-    ];
+    protected $fillable = ['name', 'email', 'password', 'is_admin', 'role'];
 
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    protected $hidden = ['password', 'remember_token'];
 
     protected function casts(): array
     {
@@ -35,6 +26,9 @@ class User extends Authenticatable
 
     public function isSeoAdmin(): bool
     {
-        return $this->is_admin && in_array($this->role, ['seo_admin', 'super_admin'], true);
+        // In this project the main admin account is the designated SEO administrator.
+        // Other authenticated blog users do not receive SEO access unless explicitly
+        // assigned one of the dedicated SEO roles.
+        return $this->is_admin && in_array($this->role, ['admin', 'seo_admin', 'super_admin'], true);
     }
 }
