@@ -5,7 +5,17 @@
     <div class="card-body">
         <h4 class="mb-4">Edit Blog Post</h4>
 
-        <form method="POST" action="{{ route('admin.blog.posts.update', $blogPost) }}" enctype="multipart/form-data">
+        @if ($errors->any())
+            <div class="alert alert-danger">
+                <ul class="mb-0">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <form method="POST" action="{{ route('admin.blog.posts.update', $blogPost) }}" enctype="multipart/form-data" id="blog-edit-form">
             @csrf
 
             <div class="row g-3">
@@ -77,71 +87,64 @@
 
                 <div class="col-12">
                     <label class="form-label">Content</label>
-                    <textarea name="content" id="blog-editor">{{ old('content', $blogPost->content) }}</textarea>
+                    <div id="blog-editor" style="min-height: 500px; background:#fff;">{!! old('content', $blogPost->content) !!}</div>
+                    <textarea name="content" id="blog-content" class="d-none">{{ old('content', $blogPost->content) }}</textarea>
+                    <div class="form-text">Free Quill editor. Supports headings, bold, italic, underline, links, lists, blockquotes and code formatting.</div>
                 </div>
             </div>
 
-            <button class="btn btn-primary mt-4">Update Post</button>
+            <button type="submit" class="btn btn-primary mt-4">Update Post</button>
         </form>
     </div>
 </div>
 @endsection
 
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
+<style>
+    #blog-editor.ql-container {
+        min-height: 500px;
+        border-radius: 0 0 .375rem .375rem;
+    }
+    #blog-editor .ql-editor {
+        min-height: 500px;
+        font-size: 16px;
+        line-height: 1.7;
+    }
+</style>
+@endpush
+
 @push('scripts')
-<script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    tinymce.init({
-        selector: '#blog-editor',
-        height: 550,
+    const editorElement = document.getElementById('blog-editor');
+    const contentField = document.getElementById('blog-content');
+    const form = document.getElementById('blog-edit-form');
 
-        plugins: [
-            // Core editing features
-            'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'link', 'lists', 'media', 'searchreplace', 'table', 'visualblocks', 'wordcount',
-
-            // Premium features
-            'checklist', 'mediaembed', 'casechange', 'formatpainter', 'pageembed', 'a11ychecker', 'tinymcespellchecker', 'permanentpen', 'powerpaste', 'advtable', 'advcode', 'advtemplate', 'tinymceai', 'uploadcare', 'mentions', 'tinycomments', 'tableofcontents', 'footnotes', 'mergetags', 'autocorrect', 'typography', 'inlinecss', 'markdown', 'importword', 'exportword', 'exportpdf'
-        ],
-
-        toolbar: 'undo redo | tinymceai-chat tinymceai-quickactions tinymceai-review | blocks fontfamily fontsize | bold italic underline strikethrough | link media table mergetags | addcomment showcomments | spellcheckdialog a11ycheck typography uploadcare | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat',
-
-        menubar: 'file edit view insert format tools table help',
-        branding: false,
-        promotion: false,
-        browser_spellcheck: true,
-        contextmenu: false,
-        content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 16px; line-height: 1.7; } h2 { margin-top: 1.5em; } h3 { margin-top: 1.25em; } h4 { margin-top: 1em; }',
-        block_formats: 'Paragraph=p;Heading 2=h2;Heading 3=h3;Heading 4=h4;Blockquote=blockquote;Preformatted=pre',
-
-        tinycomments_mode: 'embedded',
-        tinycomments_author: 'Author name',
-
-        mergetags_list: [
-            { value: 'First.Name', title: 'First Name' },
-            { value: 'Email', title: 'Email' },
-        ],
-
-        tinymceai_token_provider: async () => {
-            await fetch('https://demo.api.tiny.cloud/1/lbnah23vqsdddrj0vp7yubv4w1wezmi5rx9o81h2r1pkrzq0/auth/random', {
-                method: 'POST',
-                credentials: 'include'
-            });
-
-            return {
-                token: await fetch('https://demo.api.tiny.cloud/1/lbnah23vqsdddrj0vp7yubv4w1wezmi5rx9o81h2r1pkrzq0/jwt/tinymceai', {
-                    credentials: 'include'
-                }).then(r => r.text())
-            };
-        },
-
-        uploadcare_public_key: 'fa856229983dd8e1fbca',
-
-        setup: function (editor) {
-            editor.on('change input undo redo', function () {
-                editor.save();
-            });
+    const quill = new Quill(editorElement, {
+        theme: 'snow',
+        placeholder: 'Write your blog content here...',
+        modules: {
+            toolbar: [
+                [{ header: [2, 3, 4, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ list: 'ordered' }, { list: 'bullet' }],
+                [{ align: [] }],
+                ['blockquote', 'code-block'],
+                ['link'],
+                ['clean']
+            ]
         }
     });
+
+    function syncEditor() {
+        contentField.value = quill.root.innerHTML;
+    }
+
+    quill.on('text-change', syncEditor);
+    form.addEventListener('submit', syncEditor);
+    syncEditor();
 
     const categoryButton = document.getElementById('add-category');
     const categorySelect = document.getElementById('category_id');
