@@ -12,20 +12,37 @@
     <meta property="og:title" content="{{ $seoOgTitle ?? $seoTitle ?? 'Bright Cleaning' }}">
     <meta property="og:description" content="{{ $seoOgDescription ?? $seoDescription ?? 'Professional cleaning services.' }}">
     <meta property="og:url" content="{{ $seoCanonical ?? url('/') }}">
+    <meta property="og:type" content="website">
     @if(!empty($seoOgImage))
         <meta property="og:image" content="{{ $seoOgImage }}">
     @endif
 
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{{ $seoOgTitle ?? $seoTitle ?? 'Bright Cleaning' }}">
-    <meta name="twitter:description" content="{{ $seoOgDescription ?? $seoDescription ?? 'Professional cleaning services.' }}">
-    @if(!empty($seoOgImage))
-        <meta name="twitter:image" content="{{ $seoOgImage }}">
+    <meta name="twitter:card" content="{{ $seoTwitterCard ?? 'summary_large_image' }}">
+    <meta name="twitter:title" content="{{ $seoTwitterTitle ?? $seoOgTitle ?? $seoTitle ?? 'Bright Cleaning' }}">
+    <meta name="twitter:description" content="{{ $seoTwitterDescription ?? $seoOgDescription ?? $seoDescription ?? 'Professional cleaning services.' }}">
+    @if(!empty($seoTwitterImage))
+        <meta name="twitter:image" content="{{ $seoTwitterImage }}">
+    @endif
+
+    @if(!empty($seoLinkedinTitle))
+        <meta property="linkedin:title" content="{{ $seoLinkedinTitle }}">
+    @endif
+    @if(!empty($seoLinkedinDescription))
+        <meta property="linkedin:description" content="{{ $seoLinkedinDescription }}">
+    @endif
+    @if(!empty($seoLinkedinImage))
+        <meta property="linkedin:image" content="{{ $seoLinkedinImage }}">
+    @endif
+
+    @if(!empty($seoSettings?->search_console_verification))
+        <meta name="google-site-verification" content="{{ $seoSettings->search_console_verification }}">
     @endif
 
     @if(!empty($seoSchema))
         <script type="application/ld+json">{!! $seoSchema !!}</script>
     @endif
+
+    {!! $seoSettings->header_scripts ?? '' !!}
 
     <link rel="stylesheet" type="text/css" href="{{ asset('assets/css/bootstrap.min.css') }}">
     <script src="{{ asset('assets/js/bootstrap.min.js') }}"></script>
@@ -34,6 +51,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 </head>
 <body>
+{!! $seoSettings->body_scripts ?? '' !!}
 <div class="page_wrap">
     <header id="masthead" class="header">
         <div class="container-fluid">
