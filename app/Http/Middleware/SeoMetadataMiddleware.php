@@ -18,8 +18,8 @@ class SeoMetadataMiddleware
 
         $title = $settings->default_title ?: $settings->site_name;
         $description = $settings->default_description;
-        $canonical = $settings->default_canonical_base ?: url($request->path() === '/' ? '/' : '/'.$request->path());
-        $index = true; $follow = true; $ogTitle = $settings->social_og_title ?: null; $ogDescription = $settings->social_og_description ?: null; $ogImage = $settings->social_og_image ?: null; $schemaParts = [];
+        $canonical = $settings->default_canonical_base ? rtrim($settings->default_canonical_base,'/').($request->path()==='/'?'':'/'.$request->path()) : url($request->path() === '/' ? '/' : '/'.$request->path());
+        $index = true; $follow = true; $ogTitle = $settings->social_og_title ?: null; $ogDescription = $settings->social_og_description ?: null; $ogImage = $settings->social_og_image ?: null; $schemaNodes = [];
 
         if ($request->routeIs('blog.show') && ($post = $request->route('blogPost')) instanceof BlogPost) {
             $seo = $post->seo;
@@ -28,9 +28,9 @@ class SeoMetadataMiddleware
             $canonical = $seo?->canonical_url ?: route('blog.show', $post);
             $index = $seo?->robots_index ?? true; $follow = $seo?->robots_follow ?? true;
             $ogTitle = $seo?->og_title ?: $title; $ogDescription = $seo?->og_description ?: $description; $ogImage = $seo?->og_image ?: ($post->image_path ? asset('storage/'.$post->image_path) : $settings->social_og_image);
-            if ($seo?->custom_schema) $schemaParts[] = $seo->custom_schema;
-            $schemaParts[] = json_encode(['@context'=>'https://schema.org','@type'=>'BlogPosting','headline'=>$post->title,'description'=>$description,'datePublished'=>optional($post->published_at)->toIso8601String(),'image'=>$ogImage,'mainEntityOfPage'=>$canonical], JSON_UNESCAPED_SLASHES);
-            if ($seo) foreach ($seo->faqs as $faq) $schemaParts[] = json_encode(['@context'=>'https://schema.org','@type'=>'FAQPage','mainEntity'=>[['@type'=>'Question','name'=>$faq->question,'acceptedAnswer'=>['@type'=>'Answer','text'=>strip_tags($faq->answer)]]]], JSON_UNESCAPED_SLASHES);
+            $this->pushJsonNode($schemaNodes, $seo?->custom_schema);
+            $schemaNodes[] = ['@type'=>'BlogPosting','headline'=>$post->title,'description'=>$description,'datePublished'=>optional($post->published_at)->toIso8601String(),'image'=>$ogImage,'mainEntityOfPage'=>$canonical];
+            if ($seo) foreach ($seo->faqs as $faq) $schemaNodes[] = ['@type'=>'Question','name'=>$faq->question,'acceptedAnswer'=>['@type'=>'Answer','text'=>strip_tags($faq->answer)]];
         } elseif ($request->routeIs('blog.category') && ($category = $request->route('category')) instanceof BlogCategory) {
             $title = $category->seo_title ?: ($category->name . ' | ' . $settings->site_name);
             $description = $category->meta_description ?: ($category->description ?: 'Browse '.$category->name.' articles.');
@@ -45,13 +45,18 @@ class SeoMetadataMiddleware
                 $description = $meta->meta_description ?: $settings->default_description;
                 $canonical = $meta->canonical_url ?: $canonical; $index = $meta->robots_index ?? true; $follow = $meta->robots_follow ?? true;
                 $ogTitle = $meta->og_title ?: $title; $ogDescription = $meta->og_description ?: $description; $ogImage = $meta->og_image ?: $settings->social_og_image;
-                if ($meta->custom_schema) $schemaParts[] = $meta->custom_schema;
-                foreach ($meta->faqs as $faq) $schemaParts[] = json_encode(['@context'=>'https://schema.org','@type'=>'FAQPage','mainEntity'=>[['@type'=>'Question','name'=>$faq->question,'acceptedAnswer'=>['@type'=>'Answer','text'=>strip_tags($faq->answer)]]]], JSON_UNESCAPED_SLASHES);
+                $this->pushJsonNode($schemaNodes, $meta->custom_schema);
+                foreach ($meta->faqs as $faq) $schemaNodes[] = ['@type'=>'Question','name'=>$faq->question,'acceptedAnswer'=>['@type'=>'Answer','text'=>strip_tags($faq->answer)]];
             }
         }
 
-        foreach (['schema_organization','schema_website','schema_local_business','schema_service','schema_product','schema_breadcrumb','schema_custom'] as $schemaField) {
-            if (!empty($settings->{$schemaField})) $schemaParts[] = $settings->{$schemaField};
+        foreach (['schema_organization','schema_website','schema_local_business','schema_service','schema_product','schema_breadcrumb','schema_custom'] as $schemaField) $this->pushJsonNode($schemaNodes, $settings->{$schemaField});
+
+        $schema = null;
+        if ($schemaNodes) {
+            $hasFaq = collect($schemaNodes)->contains(fn($node) => is_array($node) && ($node['@type'] ?? null) === 'Question');
+            if ($hasFaq) $schemaNodes[] = ['@type'=>'FAQPage','mainEntity'=>array_values(array_filter($schemaNodes,fn($node)=>is_array($node)&&($node['@type']??null)==='Question'))];
+            $schema = json_encode(['@context'=>'https://schema.org','@graph'=>array_values(array_filter($schemaNodes,fn($node)=>is_array($node)&&($node['@type']??null)!=='Question'))], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
         }
 
         view()->share([
@@ -61,8 +66,18 @@ class SeoMetadataMiddleware
             'seoTwitterCard'=>$settings->twitter_card ?: 'summary_large_image','seoTwitterTitle'=>$settings->twitter_title ?: ($ogTitle ?: $title),
             'seoTwitterDescription'=>$settings->twitter_description ?: ($ogDescription ?: $description),'seoTwitterImage'=>$settings->twitter_image ?: $ogImage,
             'seoLinkedinTitle'=>$settings->linkedin_title ?: ($ogTitle ?: $title),'seoLinkedinDescription'=>$settings->linkedin_description ?: ($ogDescription ?: $description),'seoLinkedinImage'=>$settings->linkedin_image ?: $ogImage,
-            'seoSchema'=>implode("\n", $schemaParts),'seoSettings'=>$settings,
+            'seoSchema'=>$schema,'seoSettings'=>$settings,
         ]);
         return $next($request);
+    }
+
+    private function pushJsonNode(array &$nodes, ?string $json): void
+    {
+        if (!$json) return;
+        $decoded=json_decode($json,true);
+        if (json_last_error()===JSON_ERROR_NONE && is_array($decoded)) {
+            if (isset($decoded['@graph']) && is_array($decoded['@graph'])) foreach($decoded['@graph'] as $node) if(is_array($node)) $nodes[]=$node;
+            else { unset($decoded['@context']); $nodes[]=$decoded; }
+        }
     }
 }
