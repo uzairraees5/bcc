@@ -12,6 +12,7 @@ Route::post('/book-walkthrough', [ContactController::class, 'detailedStore'])->n
 Route::get('/', fn () => view('home'));
 Route::get('/about-us', fn () => view('about'));
 Route::get('/commercial-cleaning', fn () => view('commercial-cleaning'));
+Route::get('/test', fn () => view('test'));
 Route::get('/services', fn () => view('services'));
 Route::get('/contact', fn () => view('contact'));
 Route::get('/locations', fn () => view('locations'));
