@@ -1,6 +1,6 @@
 <section class="secRely">
 	<div class="container">
-		<div class="row" style="background-image: url('assets/images/bg_rely.png');">
+		<div class="row" style="background-image: url('{{ asset('assets/images/bg_rely.png') }}');">
 			<div class="col-12 col-md-8">
 				<div class="txt_head">
 					<h2 class="ft-urban clr-white">Need Reliable Commercial Cleaning?</h2>
@@ -39,7 +39,7 @@
 			<div class="col-12 col-md-4">
 				<div class="ft-widget">
 					<div class="ft-logo">
-						<img src="assets/images/logo.png">
+						<img src="{{ asset('assets/images/logo.png') }}">
 					</div>
 					<p class="clr-white">
 						BCC Solutions LLC delivers dependable commercial cleaning services for offices, warehouses, retail stores, medical facilities, and industrial spaces throughout South Texas. Our team focuses on consistency, professionalism, and long-term client satisfaction.

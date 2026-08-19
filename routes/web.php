@@ -11,9 +11,15 @@ Route::post('/contact', [ContactController::class, 'store'])->name('contact.stor
 Route::post('/book-walkthrough', [ContactController::class, 'detailedStore'])->name('contact.detailed');
 Route::get('/', fn () => view('home'));
 Route::get('/about-us', fn () => view('about'));
-Route::get('/commercial-cleaning', fn () => view('commercial-cleaning'));
+Route::get('/commercial-cleaning-brownsville', fn () => view('commercial-cleaning-brownsville'));
 Route::get('/test', fn () => view('test'));
+Route::get('/newtest', fn () => view('newtest'));
 Route::get('/services', fn () => view('services'));
+Route::get('/services/commercial-cleaning-services', fn () => view('commercial-cleaning-services'));
+Route::get('/services/janitorial-services', fn () => view('janitorial-services'));
+Route::get('/services/office-cleaning-services', fn () => view('office-cleaning-services'));
+Route::get('/services/medical-office-cleaning-services', fn () => view('medical-office-cleaning-services'));
+Route::get('/services/warehouse-cleaning-services', fn () => view('warehouse-cleaning-services'));
 Route::get('/contact', fn () => view('contact'));
 Route::get('/locations', fn () => view('locations'));
 Route::get('/case-studies', fn () => view('casestudies'));

@@ -55,7 +55,7 @@
                         <ul class="navbar-nav">
                             <li class="nav-item"><a href="/" class="nav-link">Home</a></li>
                             <li class="nav-item"><a href="/about-us" class="nav-link">About</a></li>
-                            <li class="nav-item"><a href="/commercial-cleaning" class="nav-link">Commercial Cleaning</a></li>
+                            <li class="nav-item"><a href="/commercial-cleaning-brownsville" class="nav-link">Commercial Cleaning</a></li>
                             <li class="nav-item"><a href="/services" class="nav-link">Services</a></li>
                             <li class="nav-item"><a href="/locations" class="nav-link">Locations</a></li>
                             <li class="nav-item"><a href="/case-studies" class="nav-link">Case Studies</a></li>

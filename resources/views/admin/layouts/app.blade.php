@@ -121,6 +121,9 @@
         .admin-content code { color: #475569; background: #f1f5f9; padding: 3px 6px; border-radius: 5px; }
         .tox-tinymce { border-radius: 10px !important; border-color: #dce3ec !important; }
         .tox .tox-edit-area::before { border: 0 !important; }
+        #blog-editor.ql-container {
+            height: fit-content;
+        }
 
         @media (max-width: 991.98px) {
             .admin-sidebar { position: static; max-height: none; margin-bottom: 18px; }

@@ -741,8 +741,9 @@ header#masthead .container-fluid {
   line-height: 30px;
 }
 .srvBox .ctn {
-  padding-right: 120px;
+  padding-right: 50px;
   position: relative;
+  min-height: 190px;
 }
 .srvBox .ctn .btn-srv {
   display: flex;
@@ -1329,7 +1330,7 @@ header#masthead .container-fluid {
   border-radius: 10px;
 }
 .accordion-body {
-  padding: 10px;
+  padding: 10px 20px;
 }
 .accordion-button::after {
   filter: brightness(0);
@@ -1598,6 +1599,8 @@ header#masthead .container-fluid {
   padding: 0;
   margin: 0;
   display: block;
+}
+.check-list.two_cols {
   column-count: 2;
 }
 .check-list li {
@@ -1771,11 +1774,20 @@ header#masthead .container-fluid {
   margin: 30px 0;
   color: #1A1A1A;
 }
+.sv_details h4 {
+  font-size: 24px;
+  line-height: 1.4;
+  color: #1A1A1A;
+  font-weight: 700;
+}
 .bg_blue {
   background: #004B9E;
   padding: 80px 100px;
   border-radius: 20px;
   margin: 50px 0;
+}
+.bg_blue h3.ft-urban {
+  margin-top: 0;
 }
 .sv_list .sv_link {
   display: flex;
@@ -2135,7 +2147,10 @@ header#masthead .container-fluid {
 .location-slider {
   margin-bottom: 30px;
 }
-
+.ft-widget .form label {
+  color: #fff;
+  cursor: pointer;
+}
 
 
 
@@ -2171,6 +2186,9 @@ header#masthead .container-fluid {
 }
 .alert {
     margin-top: 40px;
+}
+.gap_yaxis {
+  gap: 40px 0;
 }
 
 
